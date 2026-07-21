@@ -167,8 +167,31 @@ fn decode(data: &[u8], channels: i32) -> Option<(Desc, Vec<u8>)> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+
+    // Bench mode: `qoi_rs --bench <file> <iters>` -- time K decodes, print Mpx/s.
+    if args.len() >= 3 && args[1] == "--bench" {
+        let iters: u32 = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(300);
+        let data = match std::fs::read(&args[2]) {
+            Ok(d) => d,
+            Err(_) => std::process::exit(3),
+        };
+        for _ in 0..20 {
+            std::hint::black_box(decode(&data, 4));
+        }
+        let t0 = std::time::Instant::now();
+        let mut px: u64 = 0;
+        for _ in 0..iters {
+            if let Some((d, _)) = decode(&data, 4) {
+                px += d.width as u64 * d.height as u64;
+            }
+        }
+        let dt = t0.elapsed().as_secs_f64();
+        println!("Rust         : {:6.1} Mpx/s", px as f64 / 1e6 / dt);
+        return;
+    }
+
     if args.len() < 3 {
-        eprintln!("usage: qoi_rs <file> <channels 0|3|4>");
+        eprintln!("usage: qoi_rs <file> <channels 0|3|4>   (or --bench <file> <iters>)");
         std::process::exit(3);
     }
     let channels: i32 = args[2].parse().unwrap_or(-1);

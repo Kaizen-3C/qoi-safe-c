@@ -67,6 +67,7 @@ only — the decoder is the untrusted-input surface where memory safety is the w
 
 ```sh
 make check          # build the C decoders under ASan/UBSan + the Rust decoder; diff both vs the reference
+make bench          # decode throughput: reference C vs safe-C vs Rust (see Performance)
 make fuzz T=180     # structure-aware libFuzzer soak on the safe-C decoder (needs clang)
 ```
 
@@ -84,6 +85,25 @@ dimensions · bad channel counts (0/1/2/5/255) · bad colorspace · bad magic ·
 1-pixel image · RGBA/LUMA opcodes placed at the last byte before the padding (maximal read overshoot) ·
 one of every opcode.
 
+## Performance
+
+Faithful translation first: the decoders match the reference's *output*; matching its *speed* is a
+separate axis, and beating it (hand-tuning, idiomatic rewrites) is a deliberate optimization phase, not
+part of the safety-preserving translation. `make bench` measures decode throughput (`-O2`/release, no
+sanitizers) on a 1024×1024 near-incompressible image — a worst case where almost every pixel is a full
+chunk:
+
+| decoder | throughput | vs reference |
+|---|---|---|
+| reference C | ~440 Mpx/s | baseline |
+| safe-C (every access bounds-checked) | ~350 Mpx/s | ~79% |
+| Rust (`#![forbid(unsafe_code)]`) | ~340 Mpx/s | ~76% |
+
+(Absolute numbers are machine-dependent — run `make bench` on your own box.) The ~20% is the honest cost
+of local bounds-checking without a rewrite. For a hand-tuned Rust QOI codec that *beats* the reference C,
+see [`qoi-rust`](https://github.com/aldanor/qoi-rust) — that's the optimization road; ours is the
+faithful-and-safe one.
+
 ## Layout
 
 ```
@@ -93,6 +113,7 @@ src/qoi_safe.[ch]   the hardened-C decoder
 rust/               the safe-Rust decoder (#![forbid(unsafe_code)]), driven as a subprocess
 test/differential.c reference vs safe-C vs Rust, byte-identical over the corpus (ASan/UBSan)
 test/fuzz_safe.c    structure-aware libFuzzer target on the safe-C decoder
+test/bench.c        decode-throughput benchmark (reference C vs safe-C; Rust via qoi_rs --bench)
 test/gen_corpus.c   deterministic valid + hostile corpus generator
 ```
 

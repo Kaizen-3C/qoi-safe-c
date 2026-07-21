@@ -14,7 +14,7 @@ STRICT := -std=c11 -Wall -Wextra -Werror -O1 -g
 LOOSE  := -std=c11 -O1 -g -w
 SAN    := -fsanitize=address,undefined -fno-sanitize-recover=all
 
-.PHONY: check fuzz clean
+.PHONY: check bench fuzz clean
 check:
 	@mkdir -p corpus/valid corpus/hostile
 	$(CC) $(LOOSE) $(SAN) test/gen_corpus.c -o gen_corpus
@@ -26,12 +26,18 @@ check:
 	$(CC) $(SAN) original.o qoi_safe.o differential.o -o differential
 	./differential corpus rust/target/release/qoi_rs
 
+bench:                      ## decode throughput, reference C vs safe-C vs Rust (no sanitizers, -O2/release)
+	$(CC) -std=c11 -O2 test/bench.c src/qoi_safe.c -o bench_c
+	./bench_c bench_big.qoi
+	cargo build --release --manifest-path rust/Cargo.toml
+	./rust/target/release/qoi_rs --bench bench_big.qoi 300
+
 fuzz:
 	@mkdir -p corpus/valid corpus/hostile
 	$(CC) $(STRICT) -fsanitize=address,undefined,fuzzer src/qoi_safe.c test/fuzz_safe.c -o fuzz_safe
 	./fuzz_safe -max_total_time=$(or $(T),120) corpus/valid corpus/hostile
 
 clean:
-	rm -f gen_corpus differential fuzz_safe *.o
+	rm -f gen_corpus differential fuzz_safe bench_c bench_big.qoi *.o
 	rm -rf corpus/valid corpus/hostile
 	cargo clean --manifest-path rust/Cargo.toml 2>/dev/null || true
