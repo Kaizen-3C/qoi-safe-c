@@ -1,7 +1,7 @@
 # qoi-safe-c
 
 **Three roads to a memory-safe QOI decoder — and what each costs.** This repo walks two of them, from
-the same C source, and proves both correct with one command.
+the same C source, and proves both match the reference — byte for byte — with one command.
 
 [QOI](https://qoiformat.org/) is a small, fast, lossless image format. Because it's tiny and its spec
 is stable, it has become a natural yardstick for *how* you make a decoder of untrusted input
@@ -32,7 +32,8 @@ Rust   : PASS -- 22/22 files, 66 decode-cases, byte-identical to reference
 >
 > **We do not claim performance or idiomatic superiority.** For a fast, idiomatic, hand-written Rust
 > QOI codec, use [`qoi-rust`](https://github.com/aldanor/qoi-rust). Our Rust port exists to show the
-> *same source, verified equivalent, in a second target language* — not to win a benchmark.
+> *same source, shown byte-identical to the reference over the corpus, in a second target language* —
+> not to win a benchmark.
 
 This is the point: the value isn't "we wrote a decoder," it's a **re-runnable proof that the decoder is
 equivalent and safe** — the same proof, whichever target language you migrate to.
@@ -53,8 +54,8 @@ more useful:
   a bounds-checked read cursor (so an over-read can't dereference out of range even if a caller lies
   about the size or drops the padding), an explicit width-independent overflow guard, an asserted write
   bound. You verify safety line by line, not by a whole-file argument.
-- **A second migration target (the Rust decoder), verified equivalent.** The same logic in
-  `#![forbid(unsafe_code)]` Rust, held to the same byte-identity contract.
+- **A second migration target (the Rust decoder), shown byte-identical over the same corpus.** The same
+  logic in `#![forbid(unsafe_code)]` Rust, held to the same byte-identity contract.
 - **A re-runnable proof.** `make check` rebuilds the C decoders under ASan **and** UBSan, regenerates a
   valid + hostile corpus, and asserts both decoders are byte-for-byte identical to the reference.
 
