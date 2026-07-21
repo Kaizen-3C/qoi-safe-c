@@ -19,11 +19,12 @@ check:
 	@mkdir -p corpus/valid corpus/hostile
 	$(CC) $(LOOSE) $(SAN) test/gen_corpus.c -o gen_corpus
 	./gen_corpus corpus
+	cargo build --release --manifest-path rust/Cargo.toml
 	$(CC) $(LOOSE)  $(SAN) -c src/original.c      -o original.o
 	$(CC) $(STRICT) $(SAN) -c src/qoi_safe.c      -o qoi_safe.o
 	$(CC) $(LOOSE)  $(SAN) -c test/differential.c -o differential.o
 	$(CC) $(SAN) original.o qoi_safe.o differential.o -o differential
-	./differential corpus
+	./differential corpus rust/target/release/qoi_rs
 
 fuzz:
 	@mkdir -p corpus/valid corpus/hostile
@@ -33,3 +34,4 @@ fuzz:
 clean:
 	rm -f gen_corpus differential fuzz_safe *.o
 	rm -rf corpus/valid corpus/hostile
+	cargo clean --manifest-path rust/Cargo.toml 2>/dev/null || true

@@ -1,0 +1,13 @@
+[package]
+name = "qoi_rs"
+version = "0.1.0"
+edition = "2021"
+description = "Safe-Rust QOI decoder, proven byte-identical to the reference C over a valid+hostile corpus"
+license = "MIT"
+
+[[bin]]
+name = "qoi_rs"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 2

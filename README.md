@@ -1,19 +1,41 @@
 # qoi-safe-c
 
-**Three roads to a memory-safe QOI decoder — and what each costs.**
+**Three roads to a memory-safe QOI decoder — and what each costs.** This repo walks two of them, from
+the same C source, and proves both correct with one command.
 
 [QOI](https://qoiformat.org/) is a small, fast, lossless image format. Because it's tiny and its spec
 is stable, it has become a natural yardstick for *how* you make a decoder of untrusted input
-memory-safe. There are (at least) three roads:
+memory-safe. There are (at least) three strategies:
 
-| Road | Project | The guarantee | What it costs |
+| Strategy | Public exemplar | The guarantee | What it costs |
 |---|---|---|---|
-| **Rewrite to Ada + prove it** | [`qoi-spark`](https://github.com/Fabien-Chouteau/qoi-spark) | SPARK proof of **absence of run-time errors** (no overflow, no out-of-bounds) | new language (Ada) + a formal-methods toolchain |
-| **Rewrite to safe Rust** | [`qoi-rust`](https://github.com/aldanor/qoi-rust) | memory safety from the type system (`#![forbid(unsafe_code)]`) | new language (Rust) + ecosystem |
-| **Stay in C, harden in place** | **this repo** | spatial memory safety (no out-of-bounds), **behaviour-identical to the reference**, checked by a re-runnable differential + adversarial-ASan harness | no rewrite — same language, same team, same build |
+| **Rewrite to Ada + prove it** | [`qoi-spark`](https://github.com/Fabien-Chouteau/qoi-spark) | SPARK proof of **absence of run-time errors** | new language (Ada) + a formal-methods toolchain |
+| **Rewrite to safe Rust** | [`qoi-rust`](https://github.com/aldanor/qoi-rust) | memory safety from the type system | new language + ecosystem |
+| **Stay in C, harden in place** | *this repo* | spatial memory safety, behaviour-identical to the reference | no rewrite — same language, team, build |
 
-All three arrive at the same place — a decoder that won't be walked out of bounds by a malicious file.
-They differ in the **cost of the guarantee**. This repo is the only road that never leaves C.
+This repo implements **two** of these roads itself — a safe-Rust port (`rust/`) *and* a hardened-C
+decoder (`src/qoi_safe.c`) — and `make check` proves **both** are byte-for-byte identical to the
+reference C decoder over the same valid + adversarial corpus:
+
+```
+safe-C : PASS -- 22/22 files, 66 decode-cases, byte-identical to reference, sanitizer-clean
+Rust   : PASS -- 22/22 files, 66 decode-cases, byte-identical to reference
+```
+
+## What we claim — and what we don't
+
+> **We claim only two things, and both are re-provable by `make check`:**
+> 1. **Equivalence** — our Rust and safe-C decoders produce byte-identical output to the reference C
+>    decoder on every input in the corpus (valid and hostile), and return on exactly the same inputs.
+> 2. **Memory safety** — no out-of-bounds access: the C decoders are clean under AddressSanitizer +
+>    UndefinedBehaviorSanitizer here; the Rust decoder is `#![forbid(unsafe_code)]`.
+>
+> **We do not claim performance or idiomatic superiority.** For a fast, idiomatic, hand-written Rust
+> QOI codec, use [`qoi-rust`](https://github.com/aldanor/qoi-rust). Our Rust port exists to show the
+> *same source, verified equivalent, in a second target language* — not to win a benchmark.
+
+This is the point: the value isn't "we wrote a decoder," it's a **re-runnable proof that the decoder is
+equivalent and safe** — the same proof, whichever target language you migrate to.
 
 ## An honest starting point
 
@@ -23,31 +45,33 @@ executions plus a raw-file pass under AddressSanitizer, zero crashes. Its safety
 *global, implicit* invariants — 8 bytes of read padding, a 400-million-pixel cap that interacts with
 the platform `int` width to prevent an overflow, and up-front header validation.
 
-So this is **not** a "we found a scary bug" project. It would be dishonest to pretend otherwise. What
-`src/qoi_safe.c` adds is narrower and, we think, more useful:
+So this is **not** a "we found a scary bug" project. What our decoders add is narrower and, we think,
+more useful:
 
-- **Local auditability.** The reference is safe only if you hold all three global invariants in your
-  head at once. `qoi_safe.c` makes every bound **explicit at the point of use** — a bounds-checked read
-  cursor (so an over-read cannot dereference out of range even if a caller lies about the size or drops
-  the padding), an explicit width-independent overflow guard, an asserted write bound. You verify safety
-  line by line, not by a whole-file argument.
-- **A re-runnable proof.** `make check` rebuilds both decoders under ASan **and** UBSan, regenerates a
-  valid + hostile corpus, and asserts the safe decoder is **byte-for-byte identical** to the reference
-  on every input. Behaviour-preserving *and* sanitizer-clean, on demand.
+- **Local auditability (the safe-C decoder).** The reference is safe only if you hold all three global
+  invariants in your head at once. `src/qoi_safe.c` makes every bound **explicit at the point of use** —
+  a bounds-checked read cursor (so an over-read can't dereference out of range even if a caller lies
+  about the size or drops the padding), an explicit width-independent overflow guard, an asserted write
+  bound. You verify safety line by line, not by a whole-file argument.
+- **A second migration target (the Rust decoder), verified equivalent.** The same logic in
+  `#![forbid(unsafe_code)]` Rust, held to the same byte-identity contract.
+- **A re-runnable proof.** `make check` rebuilds the C decoders under ASan **and** UBSan, regenerates a
+  valid + hostile corpus, and asserts both decoders are byte-for-byte identical to the reference.
 
-Scope is **spatial** safety (no out-of-bounds access). The decoder owns a single allocation and returns
+Scope is **spatial** safety (no out-of-bounds access). The decoders own a single allocation and return
 it; temporal safety (use-after-free of that buffer) is the caller's and is not claimed here. Decoder
 only — the decoder is the untrusted-input surface where memory safety is the whole game.
 
 ## Reproduce
 
 ```sh
-make check          # build under ASan/UBSan, diff safe vs reference over the whole corpus
-make fuzz T=180     # structure-aware libFuzzer soak on the safe decoder (needs clang)
+make check          # build the C decoders under ASan/UBSan + the Rust decoder; diff both vs the reference
+make fuzz T=180     # structure-aware libFuzzer soak on the safe-C decoder (needs clang)
 ```
 
-`make check` prints `PASS n/n files: safe == reference (byte-identical), sanitizer-clean`, or the first
-divergence and a non-zero exit. That line is the whole claim — and you can re-run it.
+`make check` needs a C compiler (clang or gcc), `cargo`, and ASan/UBSan. It prints one `PASS` line per
+track, or the first divergence and a non-zero exit. Those two lines are the whole claim — and you can
+re-run them.
 
 ### What the corpus covers
 
@@ -64,13 +88,14 @@ one of every opcode.
 ```
 vendor/qoi.h        reference decoder (phoboslab/qoi, MIT), unmodified — see THIRD_PARTY.md
 src/original.c      thin wrapper exposing the reference decoder for the harness
-src/qoi_safe.[ch]   the hardened decoder — the substance
-test/differential.c reference vs safe, byte-identical over the corpus (ASan/UBSan)
-test/fuzz_safe.c    structure-aware libFuzzer target on the safe decoder
+src/qoi_safe.[ch]   the hardened-C decoder
+rust/               the safe-Rust decoder (#![forbid(unsafe_code)]), driven as a subprocess
+test/differential.c reference vs safe-C vs Rust, byte-identical over the corpus (ASan/UBSan)
+test/fuzz_safe.c    structure-aware libFuzzer target on the safe-C decoder
 test/gen_corpus.c   deterministic valid + hostile corpus generator
 ```
 
-## The hardening, specifically
+## The safe-C hardening, specifically
 
 Four changes, each replacing a global implicit invariant with a local explicit check, none of which
 alters observable behaviour (that's what `make check` proves):
@@ -84,7 +109,7 @@ alters observable behaviour (that's what `make check` proves):
 - **H3 — asserted write bound.** Every store into the output buffer is guarded by an assertion of its
   bound.
 - **H4 — header validation verbatim.** The reference's reject set is reproduced exactly, so the safe
-  decoder returns `NULL` on precisely the same inputs.
+  decoder returns `NULL` on precisely the same inputs. The Rust port applies the same four.
 
 ---
 

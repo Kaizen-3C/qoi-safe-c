@@ -13,3 +13,6 @@ crash-*
 leak-*
 timeout-*
 oom-*
+
+# rust build tree
+/rust/target/
