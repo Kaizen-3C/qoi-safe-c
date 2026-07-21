@@ -135,5 +135,13 @@ alters observable behaviour (that's what `make check` proves):
 
 ---
 
-*Maintained by [Kaizen-3C](https://github.com/Kaizen-3C). We do memory-safety hardening of C and C→Rust
-migration commercially — reach us at contact@kaizen-3c.dev.*
+### Related — Kaizen-3C: verified C → memory-safe migration
+
+- **[tractor-frontier](https://github.com/Kaizen-3C/tractor-frontier)** — an independent self-benchmark
+  of automated C → Rust against DARPA TRACTOR's published methodology and baselines: correctness vs.
+  memory-safety across the field, reproducible from the harness.
+- **[tractor-cost-smart](https://github.com/Kaizen-3C/tractor-cost-smart)** — the same run re-scored for
+  cost: safety held across model tiers, so a cheap-tier ladder reaches it for ~$1.36 — the certification
+  gate, not the model, is what makes it safe.
+
+*Kaizen-3C does C → Rust and C → memory-safe-C migration commercially — contact@kaizen-3c.dev.*
