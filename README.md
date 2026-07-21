@@ -135,5 +135,5 @@ alters observable behaviour (that's what `make check` proves):
 
 ---
 
-*Maintained by Kaizen-3C. We do memory-safety hardening of C and C-to-Rust migration commercially —
-case studies and contact at [kaizen-3c](https://github.com/kaizen-3c).*
+*Maintained by [Kaizen-3C](https://github.com/Kaizen-3C). We do memory-safety hardening of C and C→Rust
+migration commercially — reach us at contact@kaizen-3c.dev.*
