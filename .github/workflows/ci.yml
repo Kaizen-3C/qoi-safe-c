@@ -1,0 +1,55 @@
+name: CI — cross-arch + big-endian differential
+
+# Proves the ported decoders are byte-identical to the reference across
+# architectures AND endianness — the thing a single dev box can't check:
+#   * x86-64  (native)  — full `make check`: ASan/UBSan C differential + Rust
+#   * arm64   (native)  — same
+#   * s390x   (QEMU)    — big-endian; C differential must be byte-identical
+# The s390x leg closes the host-endianness blind spot: if a port assumed host
+# byte order, this fails.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  native:
+    name: make check · ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,    arch: x86-64 }
+          - { os: ubuntu-24.04-arm, arch: arm64  }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang
+        run: sudo apt-get update -q && sudo apt-get install -yq clang make
+      - name: Ensure Rust
+        run: |
+          if ! command -v cargo >/dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup default stable 2>/dev/null || true
+      - name: make check (byte-identical + sanitizer-clean, C & Rust)
+        run: make check
+
+  big-endian:
+    name: make check-c · s390x (big-endian, QEMU)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - name: C differential under big-endian s390x
+        run: |
+          docker run --rm --platform linux/s390x -v "$PWD":/w -w /w ubuntu:24.04 bash -c '
+            set -e
+            echo "arch: $(uname -m)  (expect s390x, big-endian)"
+            apt-get update -q && apt-get install -yq build-essential make
+            make check-c CC=gcc
+          '

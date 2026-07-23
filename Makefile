@@ -14,7 +14,7 @@ STRICT := -std=c11 -Wall -Wextra -Werror -O1 -g
 LOOSE  := -std=c11 -O1 -g -w
 SAN    := -fsanitize=address,undefined -fno-sanitize-recover=all
 
-.PHONY: check bench fuzz clean
+.PHONY: check check-c bench fuzz clean
 check:
 	@mkdir -p corpus/valid corpus/hostile
 	$(CC) $(LOOSE) $(SAN) test/gen_corpus.c -o gen_corpus
@@ -25,6 +25,16 @@ check:
 	$(CC) $(LOOSE)  $(SAN) -c test/differential.c -o differential.o
 	$(CC) $(SAN) original.o qoi_safe.o differential.o -o differential
 	./differential corpus rust/target/release/qoi_rs
+
+check-c:                    ## C-only differential (no sanitizers/Rust) -- portability / endianness proof
+	@mkdir -p corpus/valid corpus/hostile
+	$(CC) $(LOOSE) test/gen_corpus.c -o gen_corpus
+	./gen_corpus corpus
+	$(CC) $(LOOSE) -c src/original.c      -o original.o
+	$(CC) $(LOOSE) -c src/qoi_safe.c      -o qoi_safe.o
+	$(CC) $(LOOSE) -c test/differential.c -o differential.o
+	$(CC) original.o qoi_safe.o differential.o -o differential
+	./differential corpus
 
 bench:                      ## decode throughput, reference C vs safe-C vs Rust (no sanitizers, -O2/release)
 	$(CC) -std=c11 -O2 test/bench.c src/qoi_safe.c -o bench_c
