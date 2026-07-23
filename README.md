@@ -1,5 +1,7 @@
 # qoi-safe-c
 
+[![CI — cross-arch + big-endian](https://github.com/Kaizen-3C/qoi-safe-c/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaizen-3C/qoi-safe-c/actions/workflows/ci.yml)
+
 **Three roads to a memory-safe QOI decoder — and what each costs.** This repo walks two of them, from
 the same C source, and proves both match the reference — byte for byte — with one command.
 
@@ -21,6 +23,10 @@ reference C decoder over the same valid + adversarial corpus:
 safe-C : PASS -- 22/22 files, 66 decode-cases, byte-identical to reference, sanitizer-clean
 Rust   : PASS -- 22/22 files, 66 decode-cases, byte-identical to reference
 ```
+
+And "byte-identical" isn't only true on one machine: CI re-runs the differential on **x86-64, ARM64, and
+big-endian s390x** (the last under QEMU) — so a port that quietly assumed host byte order would fail *here*,
+not in production. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## What we claim — and what we don't
 
