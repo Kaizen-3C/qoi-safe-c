@@ -141,13 +141,14 @@ alters observable behaviour (that's what `make check` proves):
 
 ---
 
-### Related — Kaizen-3C: verified C → memory-safe migration
+### Related — Kaizen-3C: migration with the proof attached
 
-- **[tractor-frontier](https://github.com/Kaizen-3C/tractor-frontier)** — an independent self-benchmark
-  of automated C → Rust against DARPA TRACTOR's published methodology and baselines: correctness vs.
-  memory-safety across the field, reproducible from the harness.
-- **[tractor-cost-smart](https://github.com/Kaizen-3C/tractor-cost-smart)** — the same run re-scored for
-  cost: safety held across model tiers, so a cheap-tier ladder reaches it for ~$1.36 — the certification
-  gate, not the model, is what makes it safe.
+- **[libbzip2-rs](https://github.com/Kaizen-3C/libbzip2-rs)** — bzip2 1.0.8 in Rust with zero `unsafe`
+  code, byte-for-byte identical to the C reference over 265 commands, including malformed streams, with a
+  single `make check`.
+- **[libtiff-rs](https://github.com/Kaizen-3C/libtiff-rs)** — libtiff's TIFF decode path in Rust,
+  `unsafe` forbidden crate-wide: TIFF files decode to the same pixel bytes as the C library, re-checked in
+  public CI.
 
-*Kaizen-3C does C → Rust and C → memory-safe-C migration commercially — contact@kaizen-3c.dev.*
+*Kaizen-3C LLC migrates critical C libraries to memory-safe Rust or hardened C, and delivers evidence —
+re-runnable by the customer — that the new code behaves exactly like the old. contact@kaizen-3c.dev*

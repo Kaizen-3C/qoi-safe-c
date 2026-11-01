@@ -14,6 +14,13 @@
  *
  *   differential <corpus_dir> [path-to-qoi_rs]
  */
+/* mkstemp, opendir/readdir, unlink, close and waitpid are POSIX, and this file is
+ * built with -std=c11, which sets __STRICT_ANSI__ and so hides them in <stdlib.h>.
+ * Ask for POSIX explicitly; relaxing to -std=gnu11 would give up the STRICT target's
+ * ISO-C11 + -Werror posture for no gain. Without this, GCC 14 and later reject
+ * `mkstemp` as an implicit declaration (it was only a warning before). */
+#define _POSIX_C_SOURCE 200809L
+
 #define QOI_NO_STDIO
 #include "../vendor/qoi.h"       /* qoi_desc + qoi_decode prototype */
 #include "../src/qoi_safe.h"
