@@ -136,14 +136,14 @@ alters observable behaviour (that's what `make check` proves):
   `int`.
 - **H3 — asserted write bound.** Every store into the output buffer is guarded by an assertion of its
   bound.
-- **H4 — header validation verbatim.** The reference's reject set is reproduced exactly, so the safe
+- **H4 — header validation unchanged.** The reference's reject set is reproduced exactly, so the safe
   decoder returns `NULL` on precisely the same inputs. The Rust port applies the same four.
 
 ---
 
 ### Related — Kaizen-3C: migration with the proof attached
 
-- **[libbzip2-rs](https://github.com/Kaizen-3C/libbzip2-rs)** — bzip2 1.0.8 in Rust with zero `unsafe`
+- **[bzip2-safe-rs](https://github.com/Kaizen-3C/bzip2-safe-rs)** — bzip2 1.0.8 in Rust with zero `unsafe`
   code, byte-for-byte identical to the C reference over 265 commands, including malformed streams, with a
   single `make check`.
 - **[libtiff-rs](https://github.com/Kaizen-3C/libtiff-rs)** — libtiff's TIFF decode path in Rust,
